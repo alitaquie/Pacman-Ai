@@ -2,6 +2,9 @@ import random
 
 from pacai.agents.base import BaseAgent
 from pacai.agents.search.multiagent import MultiAgentSearchAgent
+from pacai.core.distance import manhattan
+from pacai.core.directions import Directions
+
 
 class ReflexAgent(BaseAgent):
     """
@@ -33,7 +36,9 @@ class ReflexAgent(BaseAgent):
         # Choose one of the best actions.
         scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
         bestScore = max(scores)
-        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        bestIndices = [
+            index for index in range(len(scores)) if scores[index] == bestScore
+        ]
         chosenIndex = random.choice(bestIndices)  # Pick randomly among the best.
 
         return legalMoves[chosenIndex]
@@ -57,8 +62,54 @@ class ReflexAgent(BaseAgent):
         # newScaredTimes = [ghostState.getScaredTimer() for ghostState in newGhostStates]
 
         # *** Your Code Here ***
+        newPosition = successorGameState.getPacmanPosition()
+        newGhostStates = successorGameState.getGhostStates()
+        currentGhostStates = currentGameState.getGhostStates()
+        newFoodStates = successorGameState.getFood().asList()
+        score = 0
+        ghost_dist = []
+        ghost_dist2 = []
+        food_dist = []
+        scared = []
 
-        return successorGameState.getScore()
+        if successorGameState.isWin():
+            return 99999
+
+        score = 0
+        if action == "Stop":
+            score -= 5
+
+        for ghost in currentGhostStates:
+            ghost = ghost.getPosition()
+            ghost_dist.append(manhattan(newPosition, ghost))
+            n_ghost = min(ghost_dist)
+
+        for ghost in newGhostStates:
+            ghost_pos = ghost.getPosition()
+            ghost_dist2.append(manhattan(newPosition, ghost_pos))
+            scared.append(ghost.getScaredTimer())
+            n2_ghost = min(ghost_dist2)
+
+        if scared:
+            min_scared = min(scared)
+
+        for food in newFoodStates:
+            food_dist.append(manhattan(newPosition, food))
+        near_food = min(food_dist)
+
+        if n2_ghost < n_ghost:
+            nearest_ghost = n2_ghost
+            score -= 150
+        else:
+            nearest_ghost = n_ghost
+            score += 300
+
+        score += (float(1 / near_food) + 0.1) - (1 / (int(nearest_ghost) + 0.1))
+
+        score -= len(newFoodStates)
+
+        return successorGameState.getScore() + score + min_scared
+
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -89,6 +140,69 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
+        self.depth = self.getTreeDepth()
+
+    def getAction(self, state):
+        LegalMoves = state.getLegalActions(0)
+        score = -999999
+        new_move = Directions.STOP
+        for moves in LegalMoves:
+            successorState = state.generateSuccessor(0, moves)
+            new_score = self.minimin(successorState, 0, 1)
+            if new_score > score:
+                new_move = moves
+                score = new_score
+        return new_move
+
+    def terminal(self, state, depth, moves):
+        # terminal states check
+        if state.isWin():
+            return True
+        if state.isLose():
+            return True
+        if state.isOver():
+            return True
+
+        # depth check
+        if depth == self.depth:
+            return True
+
+        # terminal state action checks
+        if not moves:
+            return True
+        if len(moves) == 0:
+            return True
+
+    def maximin(self, state, depth):
+        depth_level = depth + 1
+        max_val = -999999
+        turn = 1
+        LegalMoves = state.getLegalActions(0)
+
+        if self.terminal(state, depth_level, LegalMoves):  # Terminal Test
+            return self.getEvaluationFunction()(state)
+
+        for move in LegalMoves:
+            successorState = state.generateSuccessor(0, move)
+            max_val = max(max_val, self.minimin(successorState, depth_level, turn))
+        return max_val
+
+    def minimin(self, state, depth, turn):
+        min_val = 999999
+        LegalMoves = state.getLegalActions(turn)
+        num_agents = state.getNumAgents()
+
+        if self.terminal(state, depth, LegalMoves):
+            return self.getEvaluationFunction()(state)
+
+        for moves in LegalMoves:
+            successorStates = state.generateSuccessor(turn, moves)
+            if turn == num_agents - 1:
+                min_val = min(min_val, self.maximin(successorStates, depth))
+            else:
+                min_val = min(min_val, self.minimin(successorStates, depth, turn + 1))
+            return min_val
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -104,6 +218,80 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
+        self.depth = self.getTreeDepth()
+
+    def getAction(self, state):
+        alpha, beta = float("-inf"), float("inf")
+        LegalMoves = state.getLegalActions(0)
+        score = -999999
+        new_move = Directions.STOP
+        for moves in LegalMoves:
+            successorState = state.generateSuccessor(0, moves)
+            new_score = self.minimin(successorState, 0, 1, alpha, beta)
+            if new_score > score:
+                new_move = moves
+                score = new_score
+        return new_move
+
+    def terminal(self, state, depth, moves):
+        # terminal states check
+        if state.isWin():
+            return True
+        if state.isLose():
+            return True
+        if state.isOver():
+            return True
+
+        # depth check
+        if depth == self.depth:
+            return True
+
+        # terminal state action checks
+        if not moves:
+            return True
+        if len(moves) == 0:
+            return True
+
+    def maximin(self, state, depth, alpha, beta):
+        depth_level = depth + 1
+        score = -999999
+        turn = 1
+        LegalMoves = state.getLegalActions(0)
+
+        if self.terminal(state, depth_level, LegalMoves):  # Terminal Test
+            return self.getEvaluationFunction()(state)
+
+        for move in LegalMoves:
+            successorState = state.generateSuccessor(0, move)
+            score = max(
+                score, self.minimin(successorState, depth_level, turn, alpha, beta)
+            )
+            if score > beta:
+                return score
+            alpha = max(alpha, score)
+        return score
+
+    def minimin(self, state, depth, turn, alpha, beta):
+        score = 999999
+        LegalMoves = state.getLegalActions(turn)
+        num_agents = state.getNumAgents()
+
+        if self.terminal(state, depth, LegalMoves):
+            return self.getEvaluationFunction()(state)
+
+        for moves in LegalMoves:
+            successorStates = state.generateSuccessor(turn, moves)
+            if turn == num_agents - 1:
+                score = min(score, self.maximin(successorStates, depth, alpha, beta))
+            else:
+                score = min(
+                    score, self.minimin(successorStates, depth, turn + 1, alpha, beta)
+                )
+            if score < alpha:
+                return score
+            beta = min(beta, score)
+            return score
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -121,6 +309,72 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
     def __init__(self, index, **kwargs):
         super().__init__(index, **kwargs)
+        self.depth = self.getTreeDepth()
+
+    def getAction(self, state):
+        LegalMoves = state.getLegalActions(0)
+        score = -999999
+        new_move = Directions.STOP
+        for moves in LegalMoves:
+            successorState = state.generateSuccessor(0, moves)
+            new_score = self.minimin(successorState, 0, 1)
+            if new_score > score:
+                new_move = moves
+                score = new_score
+        return new_move
+
+    def terminal(self, state, depth, moves):
+        # terminal states check
+        if state.isWin():
+            return True
+        if state.isLose():
+            return True
+        if state.isOver():
+            return True
+
+        # depth check
+        if depth == self.depth:
+            return True
+
+        # terminal state action checks
+        if not moves:
+            return True
+        if len(moves) == 0:
+            return True
+
+    def maximin(self, state, depth):
+        depth_level = depth + 1
+        max_val = -999999
+        turn = 1
+        LegalMoves = state.getLegalActions(0)
+
+        if self.terminal(state, depth_level, LegalMoves):  # Terminal Test
+            return self.getEvaluationFunction()(state)
+
+        for move in LegalMoves:
+            successorState = state.generateSuccessor(0, move)
+            max_val = max(max_val, self.minimin(successorState, depth_level, turn))
+        return max_val
+
+    def minimin(self, state, depth, turn):
+        min_val = 0
+        LegalMoves = state.getLegalActions(turn)
+        num_agents = state.getNumAgents()
+        num_moves = len(LegalMoves)
+
+        if self.terminal(state, depth, LegalMoves):
+            return self.getEvaluationFunction()(state)
+
+        for moves in LegalMoves:
+            successorStates = state.generateSuccessor(turn, moves)
+            if turn == num_agents - 1:
+                min_val = self.maximin(successorStates, depth)
+            else:
+                min_val = self.minimin(successorStates, depth, turn + 1)
+        if num_moves == 0:
+            return 0
+        return float(min_val) / float(num_moves)
+
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -129,7 +383,36 @@ def betterEvaluationFunction(currentGameState):
     DESCRIPTION: <write something here so we know what you did>
     """
 
-    return currentGameState.getScore()
+    currentGhostStates = currentGameState.getGhostStates()
+    currentPosition = currentGameState.getPacmanPosition()
+    currentFoodStates = currentGameState.getFood().asList()
+    score = 0
+    min_scared = 0
+    ghost_dist = []
+    food_dist = []
+    scared = []
+
+    if currentGameState.isWin():
+        return 99999
+
+    score = 0
+
+    for ghost in currentGhostStates:
+        ghost = ghost.getPosition()
+        ghost_dist.append(manhattan(currentPosition, ghost))
+        n_ghost = min(ghost_dist)
+
+    if scared:
+        min_scared = min(scared)
+
+    for food in currentFoodStates:
+        food_dist.append(manhattan(currentPosition, food))
+    near_food = min(food_dist)
+
+    score += (10 / (near_food + 0.1)) - (10 / (int(n_ghost) + 0.1))
+
+    return currentGameState.getScore() + score + min_scared
+
 
 class ContestAgent(MultiAgentSearchAgent):
     """

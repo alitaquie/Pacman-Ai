@@ -1,5 +1,6 @@
 from pacai.agents.learning.value import ValueEstimationAgent
 
+
 class ValueIterationAgent(ValueEstimationAgent):
     """
     A value iteration agent.
@@ -30,7 +31,7 @@ class ValueIterationAgent(ValueEstimationAgent):
     you should return None.
     """
 
-    def __init__(self, index, mdp, discountRate = 0.9, iters = 100, **kwargs):
+    def __init__(self, index, mdp, discountRate=0.9, iters=100, **kwargs):
         super().__init__(index, **kwargs)
 
         self.mdp = mdp
@@ -39,7 +40,28 @@ class ValueIterationAgent(ValueEstimationAgent):
         self.values = {}  # A dictionary which holds the q-values for each state.
 
         # Compute the values here.
-        raise NotImplementedError()
+        states = self.mdp.getStates()  # states
+
+        for iteration in range(self.iters):  # cubes on grid lock
+            newValues = dict()
+            for state in states:
+                max_val = -99999  # worst max vax for each state
+                # check if state is terminal??
+                # reward if terminal state?
+                actions = self.mdp.getPossibleActions(state)  # actions of state
+                for action in actions:
+                    trans = self.mdp.getTransitionStatesAndProbs(state, action)
+                    q_value = 0
+                    for nextState, probability in trans:
+                        #   temp = max_val
+                        reward = self.mdp.getReward(state, action, nextState)
+                        prev_val = self.discountRate * self.getValue(nextState)
+                        q_value += probability * (reward + prev_val)
+                    if q_value > max_val:
+                        max_val = q_value
+                        newValues[state] = q_value
+
+            self.values = newValues
 
     def getValue(self, state):
         """
@@ -54,3 +76,23 @@ class ValueIterationAgent(ValueEstimationAgent):
         """
 
         return self.getPolicy(state)
+
+    def getPolicy(self, state):
+        policy = None
+        max_val = -9999999
+        actions = self.mdp.getPossibleActions(state)
+        for action in actions:
+            q_val = self.getQValue(state, action)
+            if q_val > max_val:
+                max_val = q_val
+                policy = action
+        return policy
+
+    def getQValue(self, state, action):
+        trans = self.mdp.getTransitionStatesAndProbs(state, action)
+        q_value = 0
+        for nextState, probability in trans:
+            reward = self.mdp.getReward(state, action, nextState)
+            prev_val = self.discountRate * self.getValue(nextState)
+            q_value += probability * (reward + prev_val)
+        return q_value

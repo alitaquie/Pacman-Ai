@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/alita/AppData/Local/Temp/Temp35207b53-d87a-4f91-8fbd-74aca2b8458c_asgn2.zip/asgn2",
+      "program": "c:/Users/alita/AppData/Local/Temp/Temp35207b53-d87a-4f91-8fbd-74aca2b8458c_asgn2.zip/asgn2/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}

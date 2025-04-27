@@ -1,5 +1,9 @@
 from pacai.agents.learning.reinforcement import ReinforcementAgent
 from pacai.util import reflection
+from pacai.util.probability import flipCoin
+from collections import defaultdict
+import random
+
 
 class QLearningAgent(ReinforcementAgent):
     """
@@ -46,6 +50,7 @@ class QLearningAgent(ReinforcementAgent):
         super().__init__(index, **kwargs)
 
         # You can initialize Q-values here.
+        self.qvalue = dict()
 
     def getQValue(self, state, action):
         """
@@ -53,8 +58,11 @@ class QLearningAgent(ReinforcementAgent):
         and `pacai.core.directions.Directions`.
         Should return 0.0 if the (state, action) pair has never been seen.
         """
-
-        return 0.0
+        key_pair = (state, action)
+        if key_pair not in self.qvalue:
+            return 0.0
+        else:
+            return self.qvalue[(state, action)]
 
     def getValue(self, state):
         """
@@ -68,8 +76,15 @@ class QLearningAgent(ReinforcementAgent):
         which returns the actual best action.
         Whereas this method returns the value of the best action.
         """
-
-        return 0.0
+        actions = self.getLegalActions(state)
+        if len(actions) == 0:
+            return 0.0
+        max_val = -99999
+        for action in actions:
+            q_value = self.getQValue(state, action)
+            if q_value > max_val:
+                max_val = q_value
+        return max_val
 
     def getPolicy(self, state):
         """
@@ -83,19 +98,48 @@ class QLearningAgent(ReinforcementAgent):
         which returns the value of the best action.
         Whereas this method returns the best action itself.
         """
+        actions = self.getLegalActions(state)
+        best_action = []
 
+        if len(actions) == 0.0:
+            return None
+
+        max_val = self.getValue(state)
+
+        for action in actions:
+            q_value = self.getQValue(state, action)
+            if max_val == q_value:
+                best_action.append(action)
+        return random.choice(best_action)
+
+    def update(self, state, action, nextState, reward):
+        next_val = reward + self.getDiscountRate() * self.getValue(nextState)
+        summation = (1.0 - self.getAlpha()) * self.getQValue(
+            state, action
+        ) + self.getAlpha() * next_val
+        self.qvalue[state, action] = summation
+
+    def getAction(self, state):
+        actions = self.getLegalActions(state)
+        if len(actions) != 0:
+            if flipCoin(self.getEpsilon()):
+                return random.choice(actions)
+            return self.getPolicy(state)
         return None
+
 
 class PacmanQAgent(QLearningAgent):
     """
     Exactly the same as `QLearningAgent`, but with different default parameters.
     """
 
-    def __init__(self, index, epsilon = 0.05, gamma = 0.8, alpha = 0.2, numTraining = 0, **kwargs):
-        kwargs['epsilon'] = epsilon
-        kwargs['gamma'] = gamma
-        kwargs['alpha'] = alpha
-        kwargs['numTraining'] = numTraining
+    def __init__(
+        self, index, epsilon=0.05, gamma=0.8, alpha=0.2, numTraining=0, **kwargs
+    ):
+        kwargs["epsilon"] = epsilon
+        kwargs["gamma"] = gamma
+        kwargs["alpha"] = alpha
+        kwargs["numTraining"] = numTraining
 
         super().__init__(index, **kwargs)
 
@@ -109,6 +153,7 @@ class PacmanQAgent(QLearningAgent):
         self.doAction(state, action)
 
         return action
+
 
 class ApproximateQAgent(PacmanQAgent):
     """
@@ -130,12 +175,38 @@ class ApproximateQAgent(PacmanQAgent):
     DESCRIPTION: <Write something here so we know what you did.>
     """
 
-    def __init__(self, index,
-            extractor = 'pacai.core.featureExtractors.IdentityExtractor', **kwargs):
+    def __init__(
+        self,
+        index,
+        extractor="pacai.core.featureExtractors.IdentityExtractor",
+        **kwargs
+    ):
         super().__init__(index, **kwargs)
-        self.featExtractor = reflection.qualifiedImport(extractor)
+        self.featExtractor = reflection.qualifiedImport(extractor)()
 
         # You might want to initialize weights here.
+        self.weights = defaultdict(lambda: 0)
+
+    def getQValue(self, state, action):
+        """
+        Get the Q-Value for a `pacai.core.gamestate.AbstractGameState`
+        and `pacai.core.directions.Directions`.
+        Should return 0.0 if the (state, action) pair has never been seen.
+        """
+        # weights = self.weights
+        features = self.featExtractor.getFeatures(state, action)
+        q_val = 0.0
+        for feature in features:
+            q_val += self.weights[feature] * features[feature]
+        return q_val
+
+    def update(self, state, action, nextState, reward):
+        features = self.featExtractor.getFeatures(state, action)
+        correction = (
+            reward + (self.getDiscountRate() * self.getValue(nextState))
+        ) - self.getQValue(state, action)
+        for feature in features:
+            self.weights[feature] += self.getAlpha() * correction * features[feature]
 
     def final(self, state):
         """
@@ -149,4 +220,5 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # You might want to print your weights here for debugging.
             # *** Your Code Here ***
-            raise NotImplementedError()
+            pass
+            # raise NotImplementedError()

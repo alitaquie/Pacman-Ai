@@ -9,37 +9,41 @@ return NOT_POSSIBLE
 
 NOT_POSSIBLE = None
 
+
 def question2():
     """
     [Enter a description of what you did here.]
     """
 
     answerDiscount = 0.9
-    answerNoise = 0.2
+    answerNoise = 0
 
     return answerDiscount, answerNoise
+
 
 def question3a():
     """
     [Enter a description of what you did here.]
     """
 
-    answerDiscount = 0.9
-    answerNoise = 0.2
-    answerLivingReward = 0.0
+    answerDiscount = 0.2
+    answerNoise = 0.0
+    answerLivingReward = -1
 
     return answerDiscount, answerNoise, answerLivingReward
+
 
 def question3b():
     """
     [Enter a description of what you did here.]
     """
 
-    answerDiscount = 0.9
-    answerNoise = 0.2
+    answerDiscount = 0.3
+    answerNoise = 0.3
     answerLivingReward = 0.0
 
     return answerDiscount, answerNoise, answerLivingReward
+
 
 def question3c():
     """
@@ -47,10 +51,11 @@ def question3c():
     """
 
     answerDiscount = 0.9
-    answerNoise = 0.2
-    answerLivingReward = 0.0
+    answerNoise = 0.0
+    answerLivingReward = 0.10
 
     return answerDiscount, answerNoise, answerLivingReward
+
 
 def question3d():
     """
@@ -63,6 +68,7 @@ def question3d():
 
     return answerDiscount, answerNoise, answerLivingReward
 
+
 def question3e():
     """
     [Enter a description of what you did here.]
@@ -74,17 +80,19 @@ def question3e():
 
     return answerDiscount, answerNoise, answerLivingReward
 
+
 def question6():
     """
     [Enter a description of what you did here.]
     """
 
-    answerEpsilon = 0.3
-    answerLearningRate = 0.5
+    # answerEpsilon = 0.3
+    # answerLearningRate = 0.5
 
-    return answerEpsilon, answerLearningRate
+    return NOT_POSSIBLE
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     questions = [
         question2,
         question3a,
@@ -95,7 +103,7 @@ if __name__ == '__main__':
         question6,
     ]
 
-    print('Answers to analysis questions:')
+    print("Answers to analysis questions:")
     for question in questions:
         response = question()
-        print('    Question %-10s:\t%s' % (question.__name__, str(response)))
+        print("    Question %-10s:\t%s" % (question.__name__, str(response)))
